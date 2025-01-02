@@ -11,9 +11,13 @@ const connectCommand = Command{
     .name = "connect",
     .help = "start and connect to a container",
     .description = "Start and connect to a container. If the container already exists, just connects to it.",
+
+    .rest = true,
+    .rest_placeholder = "container name",
+
     .flags = &.{
         .{ .short = 'h', .long = "help", .description = "display help information" },
-        .{ .short = 'n', .long = "name", .description = "the name of the thing", .type = .argument },
+        .{ .short = 'i', .long = "image", .description = "the image to use for the container", .type = .argument },
     },
     .subcommands = &.{helpCommand},
 };
@@ -23,9 +27,7 @@ const command = Command{
     .description = "Simple LXC controller",
     .require_subcommand = true,
     .flags = &.{
-        .{ .short = 'v', .long = "verbose", .description = "increase logging output" },
         .{ .short = 'h', .long = "help", .description = "display help information" },
-        .{ .short = 'n', .long = "name", .description = "the name of the thing", .type = .argument },
     },
     .subcommands = &.{ helpCommand, connectCommand },
 };
@@ -74,5 +76,12 @@ fn printArgs(n: usize, args: *const Command.ParseResult) void {
         std.debug.print("command - {s}\n", .{cmd.name});
 
         printArgs(n + 1, cmd.result);
+    }
+
+    if (args.rest) |rest| {
+        for (rest) |r| {
+            prefix(n);
+            std.debug.print("rest - {s}\n", .{r});
+        }
     }
 }

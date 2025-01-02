@@ -38,7 +38,11 @@ const Flag = struct {
 name: []const u8,
 help: ?[]const u8 = null,
 description: ?[]const u8 = null,
+
 require_subcommand: bool = false,
+/// if a argument doesnt match a flag or subcommand, start parsing as rest
+rest: bool = false,
+rest_placeholder: []const u8 = "rest",
 
 flags: []const Flag = &.{},
 subcommands: []const Self = &.{},
@@ -51,15 +55,21 @@ pub const SubcommandResult = struct {
 pub const ParseResult = struct {
     flags: std.StringHashMap([]const u8),
     subcommand: ?SubcommandResult,
+    rest: ?[][]const u8,
 
     allocator: std.mem.Allocator,
 
     pub fn deinit(self: *ParseResult) void {
         self.flags.deinit();
+
         if (self.subcommand) |command| {
             command.result.deinit();
 
             self.allocator.destroy(command.result);
+        }
+
+        if (self.rest) |rest| {
+            self.allocator.free(rest);
         }
     }
 
@@ -181,8 +191,8 @@ fn findFlag(self: *const Self, args: [][]const u8) ?FlagInstance {
 
 fn parseInner(self: *const Self, allocator: std.mem.Allocator, parents: [][]const u8, args: [][]const u8) !ParseResult {
     var flags = std.StringHashMap([]const u8).init(allocator);
+    var rest: ?[][]const u8 = null;
 
-    // var i: usize = if (parents.len == 0) 1 else 0;
     var i: usize = 0;
     while (i < args.len) : (i += 1) {
         if (self.findFlag(args[i..])) |flagInstance| {
@@ -224,8 +234,18 @@ fn parseInner(self: *const Self, allocator: std.mem.Allocator, parents: [][]cons
                         .name = command.name,
                         .result = subcommandResult,
                     },
+                    .rest = null,
                 };
             }
+        }
+
+        if (self.rest) {
+            rest = try allocator.alloc([]const u8, args.len - i);
+            for (args[i..], 0..) |arg, idx| {
+                (rest orelse unreachable)[idx] = arg;
+            }
+
+            break;
         }
 
         std.debug.print("failed to understand argument: {s}\n", .{args[i]});
@@ -241,6 +261,7 @@ fn parseInner(self: *const Self, allocator: std.mem.Allocator, parents: [][]cons
         .allocator = allocator,
         .flags = flags,
         .subcommand = null,
+        .rest = rest,
     };
 }
 
@@ -250,12 +271,6 @@ pub fn describe(self: *const Self, parents: [][]const u8) void {
         std.debug.print(" {s}", .{parent});
     }
 
-    // if (parents.len == 0) {
-    //
-    // } else {
-    //     std.debug.print("{s}", .{self.name});
-    // }
-
     if (self.flags.len > 0) {
         std.debug.print(" [options]", .{});
     }
@@ -264,7 +279,11 @@ pub fn describe(self: *const Self, parents: [][]const u8) void {
         if (self.require_subcommand) {
             std.debug.print(" <command>", .{});
         } else {
-            std.debug.print(" [command]", .{});
+            if (self.rest) {
+                std.debug.print(" [command|{s}]", .{self.rest_placeholder});
+            } else {
+                std.debug.print(" [command]", .{});
+            }
         }
     }
 
