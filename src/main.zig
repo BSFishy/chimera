@@ -13,6 +13,7 @@ const connectCommand = Command{
     .description = "Start and connect to a container. If the container already exists, just connects to it.",
     .flags = &.{
         .{ .short = 'h', .long = "help", .description = "display help information" },
+        .{ .short = 'n', .long = "name", .description = "the name of the thing", .type = .argument },
     },
     .subcommands = &.{helpCommand},
 };
@@ -45,6 +46,14 @@ pub fn main() !void {
     defer args.deinit();
 
     printArgs(0, &args);
+
+    const Subcommand = enum { connect };
+    const subcommand = args.subcommand orelse unreachable;
+    switch (std.meta.stringToEnum(Subcommand, subcommand.name) orelse unreachable) {
+        .connect => {
+            std.debug.print("hello world\n", .{});
+        },
+    }
 }
 
 fn prefix(n: usize) void {
