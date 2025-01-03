@@ -4,6 +4,12 @@ const Container = @import("lxc.zig").Container;
 const lxc = @import("lxc.zig");
 
 pub fn connect(allocator: std.mem.Allocator, args: *Command.ParseResult) !void {
+    const euid = std.os.linux.geteuid();
+    if (euid != 0) {
+        std.debug.print("must be run as root\n", .{});
+        std.process.exit(1);
+    }
+
     const container_name = extractContainerName(args);
     std.debug.print("building container {s}\n", .{container_name});
 

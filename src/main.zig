@@ -1,7 +1,6 @@
 const std = @import("std");
 const Command = @import("command.zig");
 const connect = @import("connect.zig").connect;
-const ensurePermissions = @import("systemd.zig").ensurePermissions;
 
 const helpCommand = Command{
     .name = "help",
@@ -42,8 +41,6 @@ pub fn main() !void {
             std.process.exit(1);
         }
     }
-
-    try ensurePermissions(allocator);
 
     var args = try command.parse(allocator);
     defer args.deinit();

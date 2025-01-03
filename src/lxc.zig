@@ -1,7 +1,5 @@
 const std = @import("std");
-const config = @import("config");
 pub const lxc = @import("lxc_translate.zig");
-const uid = @import("uid.zig");
 
 pub fn getVersion() []const u8 {
     return std.mem.span(lxc.lxc_get_version());
@@ -18,79 +16,15 @@ pub fn closeLog() void {
     lxc.lxc_log_close();
 }
 
-fn getAppConfigDir(allocator: std.mem.Allocator, appname: []const u8) ![]u8 {
-    if (std.posix.getenv("XDG_CONFIG_HOME")) |xdg| {
-        return std.fs.path.join(allocator, &[_][]const u8{ xdg, appname });
-    }
-
-    const home_dir = std.posix.getenv("HOME") orelse {
-        return error.AppDataDirUnavailable;
-    };
-    return std.fs.path.join(allocator, &[_][]const u8{ home_dir, ".config", appname });
-}
-
-fn getConfigFile(allocator: std.mem.Allocator) ![]const u8 {
-    const app_data_dir = try getAppConfigDir(allocator, "lxc");
-    var app_dir = std.fs.openDirAbsolute(app_data_dir, .{}) catch |err| blk: {
-        if (err != error.FileNotFound) {
-            return err;
-        }
-
-        try std.fs.makeDirAbsolute(app_data_dir);
-        break :blk try std.fs.openDirAbsolute(app_data_dir, .{});
-    };
-    defer app_dir.close();
-
-    const euid = std.os.linux.geteuid();
-    if (euid == 0) {
-        return app_data_dir;
-    }
-
-    var config_file = try app_dir.createFile("default.conf", .{
-        .read = true,
-        .truncate = false,
-    });
-    defer config_file.close();
-
-    const size = try config_file.getEndPos();
-    if (size == 0) {
-        const include_config = try std.fs.path.join(allocator, &.{ config.lxc_sys_confdir, "default.conf" });
-        defer allocator.free(include_config);
-
-        var writer = config_file.writer();
-        try writer.print("lxc.include = {s}\n", .{include_config});
-
-        const username = try uid.getUsername(allocator);
-        defer allocator.free(username);
-
-        const subuid = (try uid.getSubuid(allocator, username)) orelse @panic("no user in /etc/subuid");
-        try writer.print("lxc.idmap = u 0 {d} {d}\n", .{ subuid.subid, subuid.range });
-
-        const subgid = (try uid.getSubgid(allocator, username)) orelse @panic("no user in /etc/subgid");
-        try writer.print("lxc.idmap = g 0 {d} {d}\n", .{ subgid.subid, subgid.range });
-
-        try config_file.sync();
-    }
-
-    return app_data_dir;
-}
-
 pub const Container = struct {
     const Self = @This();
 
     allocator: std.mem.Allocator,
-    inner: [*c]lxc.struct_lxc_container,
+    inner: *lxc.struct_lxc_container,
 
     pub fn init(allocator: std.mem.Allocator, name: []const u8) !Self {
-        const config_path = try getConfigFile(allocator);
-        defer allocator.free(config_path);
-
         const name_ptr = try allocator.dupeZ(u8, name);
-        const config_path_ptr = try allocator.dupeZ(u8, config_path);
         defer allocator.free(name_ptr);
-        defer allocator.free(config_path_ptr);
-
-        std.debug.print("name: {s}, config path: {s}\n", .{ name_ptr, config_path_ptr });
 
         const inner = lxc.lxc_container_new(name_ptr.ptr, null);
         if (inner == null) {
@@ -99,7 +33,7 @@ pub const Container = struct {
 
         return Self{
             .allocator = allocator,
-            .inner = inner,
+            .inner = inner orelse unreachable,
         };
     }
 

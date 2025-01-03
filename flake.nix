@@ -20,10 +20,6 @@
               pkgs.zls
               pkgs.lxc
             ];
-
-            shellHook = ''
-              export LXC_SYS_CONFDIR="${pkgs.lxc}/etc/lxc"
-            '';
           };
         };
       }
