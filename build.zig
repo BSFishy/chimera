@@ -25,6 +25,16 @@ pub fn build(b: *std.Build) void {
     exe.linkLibC();
     exe.linkSystemLibrary("lxc");
 
+    var env_map = std.process.getEnvMap(b.allocator) catch @panic("failed to get env map");
+    defer env_map.deinit();
+
+    const lxc_confdir_default = env_map.get("LXC_SYS_CONFDIR") orelse "/etc/lxc";
+    const lxc_sys_confdir = b.option([]const u8, "lxc_sys_confdir", "the directory to /etc/lxc") orelse lxc_confdir_default;
+
+    const exe_options = b.addOptions();
+    exe_options.addOption([]const u8, "lxc_sys_confdir", lxc_sys_confdir);
+    exe.root_module.addOptions("config", exe_options);
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).

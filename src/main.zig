@@ -1,6 +1,7 @@
 const std = @import("std");
-const lxc = @import("lxc.zig");
 const Command = @import("command.zig");
+const connect = @import("connect.zig").connect;
+const ensurePermissions = @import("systemd.zig").ensurePermissions;
 
 const helpCommand = Command{
     .name = "help",
@@ -42,46 +43,16 @@ pub fn main() !void {
         }
     }
 
-    // const version = lxc.getVersion();
-    // std.debug.print("LXC Version: {s}\n", .{version});
+    try ensurePermissions(allocator);
+
     var args = try command.parse(allocator);
     defer args.deinit();
-
-    printArgs(0, &args);
 
     const Subcommand = enum { connect };
     const subcommand = args.subcommand orelse unreachable;
     switch (std.meta.stringToEnum(Subcommand, subcommand.name) orelse unreachable) {
         .connect => {
-            std.debug.print("hello world\n", .{});
+            try connect(allocator, subcommand.result);
         },
-    }
-}
-
-fn prefix(n: usize) void {
-    for (0..(n * 2)) |_| {
-        std.debug.print(" ", .{});
-    }
-}
-
-fn printArgs(n: usize, args: *const Command.ParseResult) void {
-    var flagsIter = args.flags.iterator();
-    while (flagsIter.next()) |flag| {
-        prefix(n);
-        std.debug.print("{s}: {s}\n", .{ flag.key_ptr.*, flag.value_ptr.* });
-    }
-
-    if (args.subcommand) |cmd| {
-        prefix(n);
-        std.debug.print("command - {s}\n", .{cmd.name});
-
-        printArgs(n + 1, cmd.result);
-    }
-
-    if (args.rest) |rest| {
-        for (rest) |r| {
-            prefix(n);
-            std.debug.print("rest - {s}\n", .{r});
-        }
     }
 }
