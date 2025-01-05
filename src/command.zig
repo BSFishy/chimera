@@ -73,8 +73,13 @@ pub const ParseResult = struct {
         }
     }
 
-    pub fn get(self: *const ParseResult, key: []const u8) ?[]const u8 {
-        return self.flags.get(key);
+    pub fn get(self: *const ParseResult, comptime T: type, key: []const u8) ?T {
+        const value = self.flags.get(key) orelse return null;
+        switch (T) {
+            []const u8 => return value,
+            bool => return std.mem.eql(u8, value, "true"),
+            else => @panic("unimplemented flag type"),
+        }
     }
 };
 

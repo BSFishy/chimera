@@ -51,12 +51,12 @@ pub const Container = struct {
         return self.inner.is_defined(self.inner);
     }
 
-    pub fn create(self: *const Self) !void {
+    pub fn create(self: *const Self, distro: []const u8, release: []const u8) !void {
         const func = self.inner.create;
 
         const args = try toArgs(self.allocator, &.{
-            "-d", "ubuntu",
-            "-r", "oracular",
+            "-d", distro,
+            "-r", release,
             "-a", "amd64",
         });
         defer freeArgs(self.allocator, args);
@@ -68,11 +68,26 @@ pub const Container = struct {
         }
     }
 
+    pub fn start(self: *const Self) !void {
+        const func = self.inner.start;
+
+        const rt = func(self.inner, 0, null);
+        if (!rt) {
+            self.printError();
+            return error.lxcError;
+        }
+    }
+
+    pub fn state(self: *const Self) []const u8 {
+        return std.mem.span(self.inner.state(self.inner));
+    }
+
     pub fn getConfigFilename(self: *const Self) ![]const u8 {
         return std.mem.span(self.inner.config_file_name(self.inner));
     }
 
-    pub fn getConfigItem(self: *const Self, key: []const u8) ![]const u8 {
+    // TODO: this doesnt work c pointer boundary?
+    pub fn getConfigItem(self: *const Self, key: []const u8) ![:0]const u8 {
         const key_ptr = try self.allocator.dupeZ(u8, key);
         defer self.allocator.free(key_ptr);
 
@@ -83,9 +98,27 @@ pub const Container = struct {
         }
 
         const out = try self.allocator.allocSentinel(u8, @intCast(len), 0);
-        _ = self.inner.get_config_item(self.inner, key_ptr.ptr, out.ptr, @intCast(out.len));
+        const rt = self.inner.get_config_item(self.inner, key_ptr.ptr, out.ptr, @intCast(out.len));
+        if (rt < 0) {
+            self.printError();
+            return error.lxcError;
+        }
 
         return out;
+    }
+
+    pub fn setConfigItem(self: *Self, key: []const u8, value: []const u8) !void {
+        const key_ptr = try self.allocator.dupeZ(u8, key);
+        const value_ptr = try self.allocator.dupeZ(u8, value);
+
+        defer self.allocator.free(key_ptr);
+        defer self.allocator.free(value_ptr);
+
+        const rt = self.inner.set_config_item(self.inner, key_ptr.ptr, value_ptr.ptr);
+        if (!rt) {
+            self.printError();
+            return error.lxcError;
+        }
     }
 
     pub fn getKeys(self: *const Self, prefix: []const u8) ![]const u8 {
@@ -102,6 +135,36 @@ pub const Container = struct {
         _ = self.inner.get_keys(self.inner, prefix_ptr.ptr, out.ptr, @intCast(out.len));
 
         return out;
+    }
+
+    pub fn attach(self: *const Self) !void {
+        var options: lxc.lxc_attach_options_t = .{
+            .attach_flags = lxc.LXC_ATTACH_DEFAULT,
+            .namespaces = -1,
+            .personality = lxc.LXC_ATTACH_DETECT_PERSONALITY,
+            .initial_cwd = null,
+            .uid = 0,
+            .gid = 0,
+            .env_policy = lxc.LXC_ATTACH_KEEP_ENV,
+            .extra_env_vars = null,
+            .extra_keep_env = null,
+            .stdin_fd = 0,
+            .stdout_fd = 1,
+            .stderr_fd = 2,
+            .log_fd = -1,
+            .lsm_label = null,
+            .groups = .{},
+        };
+        var pid: lxc.pid_t = undefined;
+
+        const rt = self.inner.attach(self.inner, lxc.lxc_attach_run_shell, null, &options, &pid);
+        if (rt != 0) {
+            self.printError();
+            return error.lxcError;
+        }
+
+        var status: u32 = undefined;
+        _ = std.os.linux.waitpid(pid, &status, 0);
     }
 };
 

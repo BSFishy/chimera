@@ -1,6 +1,7 @@
 const std = @import("std");
 const Command = @import("command.zig");
 const connect = @import("connect.zig").connect;
+const setupInterface = @import("net.zig").setupInterface;
 
 const helpCommand = Command{
     .name = "help",
@@ -17,7 +18,10 @@ const connectCommand = Command{
 
     .flags = &.{
         .{ .short = 'h', .long = "help", .description = "display help information" },
+        .{ .short = 'v', .long = "verbose", .description = "enable verbose logging for lxc" },
         .{ .short = 'i', .long = "image", .description = "the image to use for the container", .type = .argument },
+        .{ .short = 'd', .long = "distro", .description = "the distribution to start the container using", .type = .argument },
+        .{ .short = 'r', .long = "release", .description = "the release of the distribution to use", .type = .argument },
     },
     .subcommands = &.{helpCommand},
 };
@@ -45,11 +49,8 @@ pub fn main() !void {
     var args = try command.parse(allocator);
     defer args.deinit();
 
-    const Subcommand = enum { connect };
     const subcommand = args.subcommand orelse unreachable;
-    switch (std.meta.stringToEnum(Subcommand, subcommand.name) orelse unreachable) {
-        .connect => {
-            try connect(allocator, subcommand.result);
-        },
+    if (std.mem.eql(u8, subcommand.name, "connect")) {
+        try connect(allocator, subcommand.result);
     }
 }
