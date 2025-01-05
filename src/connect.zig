@@ -19,6 +19,19 @@ pub fn connect(allocator: std.mem.Allocator, args: *Command.ParseResult) !void {
     var container = try Container.init(allocator, container_name);
     defer container.deinit();
 
+    const config_item = container.getConfigItem("include") catch blk: {
+        break :blk try allocator.dupe(u8, "nuffin");
+    };
+    defer allocator.free(config_item);
+    std.debug.print("config: {s}\n", .{config_item});
+
+    const keys = container.getKeys("lxc.") catch blk: {
+        break :blk try allocator.dupe(u8, "nada");
+    };
+    defer allocator.free(keys);
+    std.debug.print("keys: {s}\n", .{keys});
+
+    std.debug.print("config filename: {s}\n", .{try container.getConfigFilename()});
     std.debug.print("container exists\n", .{});
     std.debug.print("container defined: {}\n", .{container.isDefined()});
 

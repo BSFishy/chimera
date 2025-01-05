@@ -5,7 +5,11 @@
   };
 
   outputs =
-    { nixpkgs, flake-utils, ... }:
+    {
+      nixpkgs,
+      flake-utils,
+      ...
+    }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
@@ -18,7 +22,7 @@
               pkgs.just
               pkgs.zig
               pkgs.zls
-              pkgs.lxc
+              (pkgs.callPackage ./pkgs/lxc/lxc.nix { })
             ];
           };
         };
