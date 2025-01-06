@@ -795,13 +795,13 @@ pub const struct_lxc_container = extern struct {
     load_config: ?*const fn ([*c]struct_lxc_container, [*c]const u8) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, [*c]const u8) callconv(.C) bool),
     start: *const fn (*struct_lxc_container, c_int, ?[*]const [:0]const u8) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, c_int, [*c]const [*c]u8) callconv(.C) bool),
     startl: ?*const fn ([*c]struct_lxc_container, c_int, ...) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, c_int, ...) callconv(.C) bool),
-    stop: ?*const fn ([*c]struct_lxc_container) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container) callconv(.C) bool),
+    stop: *const fn (*struct_lxc_container) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container) callconv(.C) bool),
     want_daemonize: ?*const fn ([*c]struct_lxc_container, bool) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, bool) callconv(.C) bool),
     want_close_all_fds: ?*const fn ([*c]struct_lxc_container, bool) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, bool) callconv(.C) bool),
     config_file_name: *const fn (*struct_lxc_container) callconv(.C) [*:0]u8 = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container) callconv(.C) [*c]u8),
     wait: ?*const fn ([*c]struct_lxc_container, [*c]const u8, c_int) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, [*c]const u8, c_int) callconv(.C) bool),
     set_config_item: *const fn (*struct_lxc_container, [*:0]const u8, [*:0]const u8) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, [*c]const u8, [*c]const u8) callconv(.C) bool),
-    destroy: ?*const fn ([*c]struct_lxc_container) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container) callconv(.C) bool),
+    destroy: *const fn (*struct_lxc_container) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container) callconv(.C) bool),
     save_config: ?*const fn ([*c]struct_lxc_container, [*c]const u8) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, [*c]const u8) callconv(.C) bool),
     create: *const fn (*struct_lxc_container, [*]const u8, ?[*]const u8, ?*struct_bdev_specs, c_int, [*]const [:0]const u8) callconv(.C) bool = @import("std").mem.zeroes(*const fn (*struct_lxc_container, [*]const u8, [*]const u8, *struct_bdev_specs, c_int, [*]const [*]const u8) callconv(.C) bool),
     createl: ?*const fn ([*c]struct_lxc_container, [*c]const u8, [*c]const u8, [*c]struct_bdev_specs, c_int, ...) callconv(.C) bool = @import("std").mem.zeroes(?*const fn ([*c]struct_lxc_container, [*c]const u8, [*c]const u8, [*c]struct_bdev_specs, c_int, ...) callconv(.C) bool),
@@ -863,7 +863,7 @@ pub extern fn lxc_get_global_config_item(key: [*c]const u8) [*c]const u8;
 pub extern fn lxc_get_version() [*c]const u8;
 pub extern fn list_defined_containers(lxcpath: [*c]const u8, names: [*c][*c][*c]u8, cret: [*c][*c][*c]struct_lxc_container) c_int;
 pub extern fn list_active_containers(lxcpath: [*c]const u8, names: [*c][*c][*c]u8, cret: [*c][*c][*c]struct_lxc_container) c_int;
-pub extern fn list_all_containers(lxcpath: [*c]const u8, names: [*c][*c][*c]u8, cret: [*c][*c][*c]struct_lxc_container) c_int;
+pub extern fn list_all_containers(lxcpath: ?[*:0]const u8, names: ?*[*][*:0]u8, cret: ?*[*]*struct_lxc_container) c_int;
 pub const struct_lxc_log = extern struct {
     name: [*c]const u8 = @import("std").mem.zeroes([*c]const u8),
     lxcpath: [*c]const u8 = @import("std").mem.zeroes([*c]const u8),

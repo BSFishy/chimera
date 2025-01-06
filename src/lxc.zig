@@ -78,6 +78,22 @@ pub const Container = struct {
         }
     }
 
+    pub fn destroy(self: *const Self) !void {
+        const rt = self.inner.destroy(self.inner);
+        if (!rt) {
+            self.printError();
+            return error.lxcError;
+        }
+    }
+
+    pub fn stop(self: *const Self) !void {
+        const rt = self.inner.stop(self.inner);
+        if (!rt) {
+            self.printError();
+            return error.lxcError;
+        }
+    }
+
     pub fn state(self: *const Self) []const u8 {
         return std.mem.span(self.inner.state(self.inner));
     }
@@ -167,6 +183,30 @@ pub const Container = struct {
         _ = std.os.linux.waitpid(pid, &status, 0);
     }
 };
+
+pub fn listAllContainers(allocator: std.mem.Allocator) !std.StringArrayHashMap(Container) {
+    // so this will allocate inside of the function (what the fuck). i dont
+    // really care about that so just wanted to call out we leak here
+    var names: [*][*:0]u8 = undefined;
+    var containers: [*]*lxc.lxc_container = undefined;
+    const len = lxc.list_all_containers(null, &names, &containers);
+    if (len < 0) {
+        return error.lxcError;
+    }
+
+    var out = std.StringArrayHashMap(Container).init(allocator);
+    for (0..@intCast(len)) |i| {
+        const name = names[i];
+        const container = containers[i];
+
+        try out.put(std.mem.span(name), Container{
+            .allocator = allocator,
+            .inner = container,
+        });
+    }
+
+    return out;
+}
 
 fn toArgs(allocator: std.mem.Allocator, args: []const []const u8) ![:null]?[*:0]const u8 {
     var out = try allocator.allocSentinel(?[*:0]const u8, args.len, null);

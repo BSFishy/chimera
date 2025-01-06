@@ -87,6 +87,6 @@ fn getContainerRelease(args: *const Command.ParseResult, distro: []const u8) []c
         return "oracular";
     }
 
-    std.debug.print("unknown distro {s}, please specify a release: https://images.linuxcontainers.org/", .{});
+    std.debug.print("unknown distro {s}, please specify a release: https://images.linuxcontainers.org/", .{distro});
     std.process.exit(1);
 }
