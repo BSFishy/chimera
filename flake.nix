@@ -16,6 +16,22 @@
         pkgs = import nixpkgs { inherit system; };
       in
       {
+        packages = {
+          default = pkgs.stdenv.mkDerivation {
+            pname = "chimera";
+            version = "0.1.0";
+            src = ./.;
+
+            nativeBuildInputs = [
+              pkgs.zig.hook
+            ];
+
+            buildInputs = [
+              (pkgs.callPackage ./pkgs/lxc/lxc.nix { })
+            ];
+          };
+        };
+
         devShells = {
           default = pkgs.mkShell {
             buildInputs = [
