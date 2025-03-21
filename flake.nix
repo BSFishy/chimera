@@ -28,7 +28,7 @@
             ];
 
             buildInputs = [
-              (pkgs.callPackage ./pkgs/lxc/lxc.nix { })
+              pkgs.lxc
             ];
           };
         };
@@ -39,7 +39,7 @@
               pkgs.just
               pkgs.zig
               pkgs.zls
-              (pkgs.callPackage ./pkgs/lxc/lxc.nix { })
+              pkgs.lxc
             ];
           };
         };
